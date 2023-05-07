@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.colors import Colormap
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from infix import shift_infix as infix
 
 def k_mom_no_occ(df:pd.DataFrame, conc:str, conc_list:List[str], k:float)-> float:
@@ -124,4 +124,35 @@ def cumulative_data(array) -> Tuple[np.array, np.array]:
     return array, cumul
 
 def cumDict(concList:List[str], df:pd.DataFrame) -> dict:
+    '''
+    Create a dictionary of cumulatives
+    '''
     return {conc: pd.Series(cumulative_data(np.array(df)[:,concList.index(conc)])[1]) for conc in concList}
+
+
+def k_moment(sizes:Union[np.array, List[float]], occurances:int, k:float) -> float:
+    '''
+    compute k-th moment
+    '''
+    sizes:np.array = np.array(sizes)
+    sizes:np.array = sizes[~np.isnan(sizes)]
+    return np.sum(sizes**k * occurances) / np.sum(occurances)
+
+
+
+###########################
+# Pappu specific function #
+###########################
+def k_moment_random(df:pd.DataFrame, concentration:str, pappu_conc:List[str], k:float) -> float:
+    array_occurances:np.array = np.array(df)
+    sizes:np.array = np.array(df['Size'])
+    concentration_columns_idx:int = pappu_conc.index(concentration) 
+    column_occurrances:np.array = array_occurances[:,concentration_columns_idx*3 + 1:\
+         concentration_columns_idx*3 + 4]
+    
+    column_chosen_idx:int = np.random.choice([0,1,2], 1, p=[1/3, 1/3, 1/3])[0]
+    column_chosen:np.array = column_occurrances[:, column_chosen_idx]
+
+    k_th_moment: float = k_moment(sizes, column_chosen, k)
+
+    return k_th_moment
