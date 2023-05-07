@@ -90,8 +90,38 @@ def strToFloat(listStr:List[str]) -> List[float]:
 def tail(listTail:list):
     return listTail[1:]
 
+
 @infix
-def functionComposition(f:callable, g:callable):
+def fC(f:callable, g:callable) -> callable:
+    '''
+    Infix function composition
+    '''
     return lambda x: f(g(x))
 
-tailPlusStrToFloat = tail <<functionComposition>> strToFloat
+
+def varPropagationDead(m:float, q:float, varm:float, varq:float):
+    return (q**2 / m**4) * varm + (1 / q **2) * varq
+#(popt[1]**2 / popt[0]**4) * pcov[0][0] + (1 / popt[1] **2) * pcov[1][1])
+
+def weightedAverage(vars:float, values:float) -> Tuple[float, float]:
+    k =  np.sum(1 / np.array(vars))
+    y_bar = np.sum(np.array(values) / np.array(vars)  ) / k
+    var = np.sqrt(1/k)
+    return y_bar, var
+
+tail2 = lambda x: tail(tail(x))
+
+
+def cumulative_data(array) -> Tuple[np.array, np.array]:
+    '''
+    Dunction to compute the survival of a given array/list
+    '''
+    array = np.array(array)
+    array = np.sort(array)
+    array = array[~np.isnan(array)]
+    array = array[array >= 0]
+    cumul = 1 - np.arange(0, len(array))/(len(array))
+    return array, cumul
+
+def cumDict(concList:List[str], df:pd.DataFrame) -> dict:
+    return {conc: pd.Series(cumulative_data(np.array(df)[:,concList.index(conc)])[1]) for conc in concList}
