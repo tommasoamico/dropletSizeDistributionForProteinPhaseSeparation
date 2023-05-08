@@ -140,9 +140,9 @@ def k_moment(sizes:Union[np.array, List[float]], occurances:int, k:float) -> flo
 
 
 
-###########################
-# Pappu specific function #
-###########################
+############################
+# Pappu specific functions #
+############################
 def k_moment_random(df:pd.DataFrame, concentration:str, pappu_conc:List[str], k:float) -> float:
     array_occurances:np.array = np.array(df)
     sizes:np.array = np.array(df['Size'])
@@ -156,3 +156,25 @@ def k_moment_random(df:pd.DataFrame, concentration:str, pappu_conc:List[str], k:
     k_th_moment: float = k_moment(sizes, column_chosen, k)
 
     return k_th_moment
+
+def dict_moment(df, pappu_conc, k):
+    return {conc: np.mean([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])\
+    for conc in pappu_conc}
+
+
+
+def dict_moment_std(df, pappu_conc, k):
+    return {conc: np.std([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])\
+    for conc in pappu_conc}
+
+
+def k_array_lines_pappu_a(df:pd.DataFrame, concList:List[str], kToTry:List[float]) -> Tuple[List[float], List[float]]:
+    k_array_lines_a:List[float] = []
+    k_array_std_a:List[float] = []
+    for k in kToTry:
+        k_mom = dict_moment(df, concList, k)
+        k_mom_std = dict_moment_std(df, concList, k)
+        k_mom = dict(map(lambda kv: (kv[0], (kv[1])**(-1/k)), k_mom.items()))
+        k_array_lines_a.append(k_mom)
+        k_array_std_a.append(k_mom_std)
+    return k_array_lines_a, k_array_std_a

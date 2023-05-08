@@ -3,6 +3,7 @@ from matplotlib.colors import Colormap
 import numpy as np
 from dropletsProject.utilityFunctions import cmapGet, tail
 from typing import List
+import pandas as pd
 
 ################
 # DEAD protein # 
@@ -22,3 +23,8 @@ critical_c_dead:float = 40
 ################
 pathPappuA:str = './data/pappu/Figure4A_B_C.xlsx'
 pappu_a_conc:List[str] = ['0.125', '0.25','0.5', '1', '2']
+critical_c_a = 2
+k_to_try_pappu_a = [0.5, 1, 1.5, 2]
+cmapPappuA = matplotlib.cm.get_cmap('Greens') 
+num_tries:int = 50 
+rand_mean_dict:dict = {conc: pd.DataFrame() for conc in pappu_a_conc}
