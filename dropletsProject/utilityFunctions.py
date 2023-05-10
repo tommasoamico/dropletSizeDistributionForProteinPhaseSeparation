@@ -5,8 +5,10 @@ import matplotlib
 from matplotlib.colors import Colormap
 from typing import List, Tuple, Union
 from infix import shift_infix as infix
+import re
 
-def k_mom_no_occ(df:pd.DataFrame, conc:str, conc_list:List[str], k:float)-> float:
+
+def k_mom_no_occ(df: pd.DataFrame, conc: str, conc_list: List[str], k: float) -> float:
     '''
     Function to calculate the kth moment of a given concentration from a dataframe df
 
@@ -21,7 +23,7 @@ def k_mom_no_occ(df:pd.DataFrame, conc:str, conc_list:List[str], k:float)-> floa
     return k_moment
 
 
-def k_mom_no_occ_std(df:pd.DataFrame, conc:str, conc_list:List[str], k:float) -> float:
+def k_mom_no_occ_std(df: pd.DataFrame, conc: str, conc_list: List[str], k: float) -> float:
     '''
     A function equivalent to the above one but that returns the standard deviation of the kth moment
     '''
@@ -34,20 +36,21 @@ def k_mom_no_occ_std(df:pd.DataFrame, conc:str, conc_list:List[str], k:float) ->
     return k_moment_std
 
 
-def dict_moment_no_random(df:pd.DataFrame, conc_list:List[str], k:float) -> dict:
+def dict_moment_no_random(df: pd.DataFrame, conc_list: List[str], k: float) -> dict:
     '''
     Dictionary of kth moments for each concentration in conc_list
     '''
     return {conc: k_mom_no_occ(df, conc, conc_list, k) for conc in conc_list}
 
-def dict_moment_no_random_std(df:pd.DataFrame, conc_list:List[str], k:float) -> dict:
+
+def dict_moment_no_random_std(df: pd.DataFrame, conc_list: List[str], k: float) -> dict:
     '''
     Dictionary of kth moment's std for each concentration in conc_list
     '''
     return {conc: k_mom_no_occ_std(df, conc, conc_list, k) for conc in conc_list}
 
 
-def setFontMatplotlib(fontFamily:str = 'Helvetica') -> None:
+def setFontMatplotlib(fontFamily: str = 'Helvetica') -> None:
     '''
     Function to set the font for matplotlib
     '''
@@ -61,17 +64,18 @@ def line(x, a, b):
     return a*x + b
 
 
-def k_array_lines(k_to_try:List[float], df:pd.DataFrame, conc_list:List[str]) -> List[dict]:
+def k_array_lines(k_to_try: List[float], df: pd.DataFrame, conc_list: List[str]) -> List[dict]:
     '''
     Rescales the k-th moment 
     '''
-    k_array_lines:List[float] = []
+    k_array_lines: List[float] = []
     for k in k_to_try:
-        k_mom:dict = dict_moment_no_random(df, conc_list, k)
+        k_mom: dict = dict_moment_no_random(df, conc_list, k)
         k_mom = dict(map(lambda kv: (kv[0], (kv[1])**(-1/k)), k_mom.items()))
         k_array_lines.append(k_mom)
 
     return k_array_lines
+
 
 def createCanvas() -> Tuple[plt.Figure, plt.Axes]:
     '''
@@ -81,35 +85,43 @@ def createCanvas() -> Tuple[plt.Figure, plt.Axes]:
 
     return fig, ax
 
-def cmapGet(cmapName:str) -> Colormap:
+
+def cmapGet(cmapName: str) -> Colormap:
+    '''
+    Simple function to get a colormap from matplotlib
+    '''
     return matplotlib.cm.get_cmap(cmapName)
 
-def strToFloat(listStr:List[str]) -> List[float]:
+
+def strToFloat(listStr: List[str]) -> List[float]:
     return [float(i) for i in listStr]
 
-def tail(listTail:list):
+
+def tail(listTail: list):
     return listTail[1:]
 
 
 @infix
-def fC(f:callable, g:callable) -> callable:
+def fC(f: callable, g: callable) -> callable:
     '''
     Infix function composition
     '''
     return lambda x: f(g(x))
 
 
-def varPropagationDead(m:float, q:float, varm:float, varq:float):
-    return (q**2 / m**4) * varm + (1 / q **2) * varq
-#(popt[1]**2 / popt[0]**4) * pcov[0][0] + (1 / popt[1] **2) * pcov[1][1])
+def varPropagationDead(m: float, q: float, varm: float, varq: float):
+    return (q**2 / m**4) * varm + (1 / q ** 2) * varq
+# (popt[1]**2 / popt[0]**4) * pcov[0][0] + (1 / popt[1] **2) * pcov[1][1])
 
-def weightedAverage(vars:float, values:float) -> Tuple[float, float]:
-    k =  np.sum(1 / np.array(vars))
-    y_bar = np.sum(np.array(values) / np.array(vars)  ) / k
+
+def weightedAverage(vars: float, values: float) -> Tuple[float, float]:
+    k = np.sum(1 / np.array(vars))
+    y_bar = np.sum(np.array(values) / np.array(vars)) / k
     var = np.sqrt(1/k)
     return y_bar, var
 
-tail2 = lambda x: tail(tail(x))
+
+def tail2(x): return (tail << fC >> tail)(x)
 
 
 def cumulative_data(array) -> Tuple[np.array, np.array]:
@@ -123,54 +135,66 @@ def cumulative_data(array) -> Tuple[np.array, np.array]:
     cumul = 1 - np.arange(0, len(array))/(len(array))
     return array, cumul
 
-def cumDict(concList:List[str], df:pd.DataFrame) -> dict:
+
+def cumDict(concList: List[str], df: pd.DataFrame) -> dict:
     '''
     Create a dictionary of cumulatives
     '''
-    return {conc: pd.Series(cumulative_data(np.array(df)[:,concList.index(conc)])[1]) for conc in concList}
+    return {conc: pd.Series(cumulative_data(np.array(df)[:, concList.index(conc)])[1]) for conc in concList}
 
 
-def k_moment(sizes:Union[np.array, List[float]], occurances:int, k:float) -> float:
+def k_moment(sizes: Union[np.array, List[float]], occurances: int, k: float) -> float:
     '''
     compute k-th moment
     '''
-    sizes:np.array = np.array(sizes)
-    sizes:np.array = sizes[~np.isnan(sizes)]
+    sizes: np.array = np.array(sizes)
+    sizes: np.array = sizes[~np.isnan(sizes)]
     return np.sum(sizes**k * occurances) / np.sum(occurances)
-
 
 
 ############################
 # Pappu specific functions #
 ############################
-def k_moment_random(df:pd.DataFrame, concentration:str, pappu_conc:List[str], k:float) -> float:
-    array_occurances:np.array = np.array(df)
-    sizes:np.array = np.array(df['Size'])
-    concentration_columns_idx:int = pappu_conc.index(concentration) 
-    column_occurrances:np.array = array_occurances[:,concentration_columns_idx*3 + 1:\
-         concentration_columns_idx*3 + 4]
-    
-    column_chosen_idx:int = np.random.choice([0,1,2], 1, p=[1/3, 1/3, 1/3])[0]
-    column_chosen:np.array = column_occurrances[:, column_chosen_idx]
+def k_moment_random(df: pd.DataFrame, concentration: str, pappu_conc: List[str], k: float) -> float:
+    '''
+    Function to calculate the kth moment of a given concentration from a dataframe df
+
+    conc_list: list of concentrations present in the dataframe
+    '''
+    array_occurances: np.array = np.array(df)
+    sizes: np.array = np.array(df['Size'])
+    concentration_columns_idx: int = pappu_conc.index(concentration)
+    column_occurrances: np.array = array_occurances[:, concentration_columns_idx*3 + 1:
+                                                    concentration_columns_idx*3 + 4]
+
+    column_chosen_idx: int = np.random.choice(
+        [0, 1, 2], 1, p=[1/3, 1/3, 1/3])[0]
+    column_chosen: np.array = column_occurrances[:, column_chosen_idx]
 
     k_th_moment: float = k_moment(sizes, column_chosen, k)
 
     return k_th_moment
 
-def dict_moment(df, pappu_conc, k):
-    return {conc: np.mean([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])\
-    for conc in pappu_conc}
 
+def dict_moment(df, pappu_conc, k):
+    '''
+    Dictionary of kth moments for each concentration in pappu_conc
+    '''
+    return {conc: np.mean([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])
+            for conc in pappu_conc}
 
 
 def dict_moment_std(df, pappu_conc, k):
-    return {conc: np.std([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])\
-    for conc in pappu_conc}
+    '''
+    Dictionary of kth moment's std for each concentration in conc_list
+    '''
+    return {conc: np.std([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])
+            for conc in pappu_conc}
 
 
-def k_array_lines_pappu_a(df:pd.DataFrame, concList:List[str], kToTry:List[float]) -> Tuple[List[float], List[float]]:
-    k_array_lines_a:List[float] = []
-    k_array_std_a:List[float] = []
+def k_array_lines_pappu(df: pd.DataFrame, concList: List[str], kToTry: List[float]) -> Tuple[List[float], List[float]]:
+    k_array_lines_a: List[float] = []
+    k_array_std_a: List[float] = []
     for k in kToTry:
         k_mom = dict_moment(df, concList, k)
         k_mom_std = dict_moment_std(df, concList, k)
@@ -178,3 +202,27 @@ def k_array_lines_pappu_a(df:pd.DataFrame, concList:List[str], kToTry:List[float
         k_array_lines_a.append(k_mom)
         k_array_std_a.append(k_mom_std)
     return k_array_lines_a, k_array_std_a
+
+
+def renameColumns(df: pd.DataFrame) -> List[str]:
+    '''
+    Function to rename column of a dtaFrame for tha Pappu paper data
+    '''
+    pappu_columns: List[str] = []
+    for i, column in enumerate((tail << fC >> list)(df.columns)):
+        if i % 3 == 0:
+            pappu_columns += [re.findall('[0-9]\.[0-9]+|[0-9]', column)
+                              [0] + f'_{j}' for j in range(3)]
+
+    return pappu_columns
+
+
+def column_random(df, concentration, pappu_conc):
+    array_occurances = np.array(df)
+    concentration_columns_idx = pappu_conc.index(concentration)
+    column_occurrances = array_occurances[:, concentration_columns_idx*3 + 1:
+                                          concentration_columns_idx*3 + 4]
+
+    column_chosen_idx = np.random.choice([0, 1, 2], 1, p=[1/3, 1/3, 1/3])[0]
+    column_chosen = column_occurrances[:, column_chosen_idx]
+    return column_chosen
