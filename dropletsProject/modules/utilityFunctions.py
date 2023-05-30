@@ -6,6 +6,7 @@ from matplotlib.colors import Colormap
 from typing import List, Tuple, Union
 from infix import shift_infix as infix
 import re
+from functools import reduce
 
 
 def k_mom_no_occ(df: pd.DataFrame, conc: str, conc_list: List[str], k: float) -> float:
@@ -64,13 +65,17 @@ def line(x, a, b):
     return a*x + b
 
 
-def k_array_lines(k_to_try: List[float], df: pd.DataFrame, conc_list: List[str]) -> List[dict]:
+def k_array_lines(k_to_try: List[float], df: pd.DataFrame, conc_list: List[str], fusUnfus: bool = False) -> List[dict]:
     '''
     Rescales the k-th moment 
     '''
+    if fusUnfus:
+        momentFunc: callable = dict_moment
+    else:
+        momentFunc: callable = dict_moment_no_random
     k_array_lines: List[float] = []
     for k in k_to_try:
-        k_mom: dict = dict_moment_no_random(df, conc_list, k)
+        k_mom: dict = momentFunc(df, conc_list, k)
         k_mom = dict(map(lambda kv: (kv[0], (kv[1])**(-1/k)), k_mom.items()))
         k_array_lines.append(k_mom)
 
@@ -109,7 +114,7 @@ def fC(f: callable, g: callable) -> callable:
     return lambda x: f(g(x))
 
 
-def varPropagationDead(m: float, q: float, varm: float, varq: float):
+def varPropagation(m: float, q: float, varm: float, varq: float):
     return (q**2 / m**4) * varm + (1 / q ** 2) * varq
 # (popt[1]**2 / popt[0]**4) * pcov[0][0] + (1 / popt[1] **2) * pcov[1][1])
 
@@ -124,7 +129,7 @@ def weightedAverage(vars: float, values: float) -> Tuple[float, float]:
 def tail2(x): return (tail << fC >> tail)(x)
 
 
-def cumulative_data(array) -> Tuple[np.array, np.array]:
+def cumulative_data(array) -> Tuple[np.array]:
     '''
     Dunction to compute the survival of a given array/list
     '''
@@ -136,11 +141,23 @@ def cumulative_data(array) -> Tuple[np.array, np.array]:
     return array, cumul
 
 
-def cumDict(concList: List[str], df: pd.DataFrame) -> dict:
+def cumulativeOccurances(sizes, array) -> Tuple[np.array]:
+    array = np.array(array)
+    array = array[~np.isnan(array)]
+    array = array[array >= 0]
+    cumul = 1 - np.cumsum(array) / np.sum(array)
+
+    return sizes, cumul
+
+
+def cumDict(concList: List[str], df: pd.DataFrame, fusUnfus: bool = False) -> dict:
     '''
     Create a dictionary of cumulatives
     '''
-    return {conc: pd.Series(cumulative_data(np.array(df)[:, concList.index(conc)])[1]) for conc in concList}
+    if fusUnfus:
+        return {conc: cumulativeOccurances(df['Size'], np.array(df)[:, concList.index(conc)]) for conc in concList}
+    else:
+        return {conc: cumulative_data(np.array(df)[:, concList.index(conc)]) for conc in concList}
 
 
 def k_moment(sizes: Union[np.array, List[float]], occurances: int, k: float) -> float:
@@ -176,11 +193,17 @@ def k_moment_random(df: pd.DataFrame, concentration: str, pappu_conc: List[str],
     return k_th_moment
 
 
+def dict_moment_random(df, pappu_conc, k):
+    return {conc: np.mean([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])
+            for conc in pappu_conc}
+
+
 def dict_moment(df, pappu_conc, k):
     '''
     Dictionary of kth moments for each concentration in pappu_conc
     '''
-    return {conc: np.mean([k_moment_random(df, conc, pappu_conc, k) for _ in range(100)])
+    sizes: np.array = np.array(df['Size'])
+    return {conc: k_moment(sizes, np.array(df.iloc[:, 1 + pappu_conc.index(conc)]), k)
             for conc in pappu_conc}
 
 
@@ -193,10 +216,10 @@ def dict_moment_std(df, pappu_conc, k):
 
 
 def k_array_lines_pappu(df: pd.DataFrame, concList: List[str], kToTry: List[float]) -> Tuple[List[float], List[float]]:
-    k_array_lines_a: List[float] = []
-    k_array_std_a: List[float] = []
+    k_array_lines_a: List[dict] = []
+    k_array_std_a: List[dict] = []
     for k in kToTry:
-        k_mom = dict_moment(df, concList, k)
+        k_mom = dict_moment_random(df, concList, k)
         k_mom_std = dict_moment_std(df, concList, k)
         k_mom = dict(map(lambda kv: (kv[0], (kv[1])**(-1/k)), k_mom.items()))
         k_array_lines_a.append(k_mom)
@@ -217,7 +240,7 @@ def renameColumns(df: pd.DataFrame) -> List[str]:
     return pappu_columns
 
 
-def column_random(df, concentration, pappu_conc):
+def column_random(df: pd.DataFrame, concentration, pappu_conc):
     array_occurances = np.array(df)
     concentration_columns_idx = pappu_conc.index(concentration)
     column_occurrances = array_occurances[:, concentration_columns_idx*3 + 1:
@@ -226,3 +249,19 @@ def column_random(df, concentration, pappu_conc):
     column_chosen_idx = np.random.choice([0, 1, 2], 1, p=[1/3, 1/3, 1/3])[0]
     column_chosen = column_occurrances[:, column_chosen_idx]
     return column_chosen
+
+##########################
+# Class specific classes #
+##########################
+
+
+def tailDict(dictionary: dict) -> dict:
+    firstKey = next(iter(dictionary))
+    del dictionary[firstKey]
+    return dictionary
+
+#########################
+
+
+def stackList(inputList: List[np.array]) -> np.array:
+    return reduce(lambda x, y: np.vstack([x, y]), inputList)
