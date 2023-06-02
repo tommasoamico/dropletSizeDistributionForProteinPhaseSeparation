@@ -82,7 +82,7 @@ def k_array_lines(k_to_try: List[float], df: pd.DataFrame, conc_list: List[str],
     return k_array_lines
 
 
-def createCanvas() -> Tuple[plt.Figure, plt.Axes]:
+def createCanvas(width: float = 10) -> Tuple[plt.Figure, plt.Axes]:
     '''
     Creates a canvas for plotting with the correct aspect ratio
     '''

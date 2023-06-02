@@ -21,10 +21,10 @@ with sizeInstance.instantiateFusUnfus(df=df, concList=pappu_b_conc, kToTry=k_to_
     rho, error = workingInstance.getRhoEstimate(keys, values)
 
     print(rho, error)
-    # cumulativeAnalisis: Type = workingInstance.criticalAnalysis(fusUnfus=True)
+    cumulativeAnalisis: Type = workingInstance.criticalAnalysis(fusUnfus=True)
 
-    # cumulativeX, cumulativeY = cumulativeAnalisis.getCumulative(
-    #   valuesToDiscard=valuesToDiscard, criticalCollapse=critical_c_b)
+    cumulativeX, cumulativeY = cumulativeAnalisis.getCumulative(
+       valuesToDiscard=valuesToDiscard, criticalCollapse=critical_c_b)
 
 # with open(savePath + f'estimateExperiment{experimentNumber}.csv', mode='w') as f:
 #    f.write(f'rho,error\n{rho},{error}')

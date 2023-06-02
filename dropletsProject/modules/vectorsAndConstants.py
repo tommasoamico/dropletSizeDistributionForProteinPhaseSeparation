@@ -4,7 +4,7 @@ import numpy as np
 from modules.utilityFunctions import cmapGet, tail
 from typing import List
 import pandas as pd
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, Colormap
 
 ################
 # DEAD protein #
@@ -40,3 +40,7 @@ cmapPappuB = LinearSegmentedColormap.from_list(
     'rg', ['cornflowerblue', 'royalblue', 'orchid', 'blue', 'navy', 'black'], N=256)
 critical_c_b = 3
 cmapPappuBBlues = matplotlib.cm.get_cmap('Blues')
+
+
+###########
+coolwarm: Colormap = matplotlib.cm.get_cmap('coolwarm')
