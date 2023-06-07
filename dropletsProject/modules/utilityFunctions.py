@@ -160,18 +160,36 @@ def cumDict(concList: List[str], df: pd.DataFrame, fusUnfus: bool = False) -> di
         return {conc: cumulative_data(np.array(df)[:, concList.index(conc)]) for conc in concList}
 
 
-def k_moment(sizes: Union[np.array, List[float]], occurances: int, k: float) -> float:
+def k_moment(sizes: Union[np.ndarray, List[float]], occurances: np.ndarray, k: float) -> float:
     '''
     compute k-th moment
     '''
-    sizes: np.array = np.array(sizes)
-    sizes: np.array = sizes[~np.isnan(sizes)]
+    sizes: np.ndarray = np.array(sizes)
+    sizes: np.ndarray = sizes[~np.isnan(sizes)]
     return np.sum(sizes**k * occurances) / np.sum(occurances)
 
+
+def sNotLognormal(sizes: np.ndarray, occurrances: np.ndarray) -> float:
+    logSizes: np.ndarray = np.log(sizes)
+    logSizes: np.ndarray = logSizes[~np.isnan(logSizes)]
+    meanLnS: float = k_moment(sizes=logSizes, occurances=occurrances, k=1)
+    sNot: float = np.exp(meanLnS)
+    return sNot
+
+
+def sigmaLognormal(sizes: np.ndarray, occurrances: np.ndarray) -> float:
+    logSizes: np.ndarray = np.log(sizes)
+    logSizes: np.ndarray = logSizes[~np.isnan(logSizes)]
+    meanLogSizes = k_moment(sizes=logSizes, occurances=occurrances, k=1)
+    variance = k_moment(sizes=(logSizes - meanLogSizes)
+                        ** 2, occurances=occurrances, k=1)
+    return np.sqrt(variance)
 
 ############################
 # Pappu specific functions #
 ############################
+
+
 def k_moment_random(df: pd.DataFrame, concentration: str, pappu_conc: List[str], k: float) -> float:
     '''
     Function to calculate the kth moment of a given concentration from a dataframe df

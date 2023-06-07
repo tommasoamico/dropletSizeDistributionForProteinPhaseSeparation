@@ -40,7 +40,9 @@ cmapPappuB = LinearSegmentedColormap.from_list(
     'rg', ['cornflowerblue', 'royalblue', 'orchid', 'blue', 'navy', 'black'], N=256)
 critical_c_b = 3
 cmapPappuBBlues = matplotlib.cm.get_cmap('Blues')
-
-
+criticalEstimationJoinedA: float = pd.read_csv(
+    '/Users/tommaso/Desktop/dropletSizeDistributionForProteinPhaseSeparation/data/appData/fusUnfus/FUS/criticalRho/estimateExperimentJoint.csv')['rho'][0]
+criticalEstimationJoinedB: float = pd.read_csv(
+    '/Users/tommaso/Desktop/dropletSizeDistributionForProteinPhaseSeparation/data/appData/fusUnfus/snapFUS/criticalRho/estimateExperimentJoint.csv')['rho'][0]
 ###########
 coolwarm: Colormap = matplotlib.cm.get_cmap('coolwarm')

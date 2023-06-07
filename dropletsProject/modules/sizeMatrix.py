@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import List, Type, Tuple, Iterable
-from modules.utilityFunctions import k_array_lines, strToFloat, varPropagation, line, weightedAverage, dict_moment_no_random, stackList
+from modules.utilityFunctions import k_array_lines, strToFloat, varPropagation, line, weightedAverage, dict_moment_no_random, stackList, dict_moment, k_moment, sNotLognormal, sigmaLognormal
 from scipy.optimize import curve_fit
 from modules.survivalAnalysis import survival
 
@@ -59,33 +59,61 @@ class sizeInstance:
     def arrayKeysFromDict(dictionary: dict, valuesToDiscard: int = 0) -> np.array:
         return np.array(list(dictionary.keys())[valuesToDiscard:])
 
-    def getPhiEstimationPoints(self, criticalValue: float, valuesToDiscard: int) -> Tuple[np.array]:
-        '''
-        Thought for RP3 data
-        '''
+    def getPhiEstimationPoints(self, criticalValue: float, valuesToDiscard: int, fus: bool = False) -> Tuple[np.ndarray]:
+        if fus:
+            func: callable = dict_moment
+        else:
+            func: callable = dict_moment_no_random
         xData: List[np.array] = []
         yData: List[np.array] = []
         for k in self.kToTry:
-            momentRatio: np.array = self.arrayValuesFromDict(dict_moment_no_random(
-                self.df, self.concList, k+1)) / self.arrayValuesFromDict(dict_moment_no_random(self.df, self.concList, k))
+            momentRatio: np.array = self.arrayValuesFromDict(func(
+                self.df, self.concList, k+1)) / self.arrayValuesFromDict(func(self.df, self.concList, k))
 
-            x = np.array([np.abs((float(conc) - criticalValue)/criticalValue)
-                         for conc in self.concList])[valuesToDiscard:]
+            x: np.ndarray = np.array([np.abs((float(conc) - criticalValue)/criticalValue)
+                                     for conc in self.concList])[valuesToDiscard:]
             xData.append(-np.log(x))
             yData.append(np.log(momentRatio[valuesToDiscard:]))
 
         return stackList(xData), stackList(yData)
 
-    def getAlphaEstimationPoints(self, valuesToDiscard: int, criticalValue: float) -> Tuple[np.array]:
-        '''
-        Thought for RP3 data
-        '''
-        yData: np.array = np.log(np.nanmean(
-            self.df.iloc[:, valuesToDiscard:], axis=0))
+    def getAlphaEstimationPoints(self, valuesToDiscard: int, criticalValue: float, fus: bool = False) -> Tuple[np.ndarray]:
+        if fus:
+            dfAlpha = self.df.iloc[:, 1 + valuesToDiscard:]
+            nPoints = np.array(dfAlpha).shape[1]
+            yData: np.array = stackList([np.log(k_moment(
+                sizes=self.df.iloc[:, 0], occurances=self.df.iloc[:, 1 + i], k=1)) for i in range(nPoints)])
+        else:
+            yData: np.array = np.log(np.nanmean(
+                self.df.iloc[:, valuesToDiscard:], axis=0))
+
         xData: np.array = -np.log(
             np.abs((self.concArray - criticalValue)[valuesToDiscard:] / criticalValue))
 
         return xData, yData
+
+    def getCollapsedPdf(self) -> Tuple[np.ndarray]:
+        '''
+        Thaught for FUS and snapFUS data
+        '''
+
+        sizeArray: np.ndarray = np.array(self.df['Size'])
+        sizeDiff: np.ndarray = np.diff(np.insert(sizeArray, 0, [0]))
+        occurrances: np.ndarray = np.array(self.df.iloc[:, 1:])
+        allSnotLognormal: np.ndarray = np.apply_along_axis(
+            func1d=lambda x: sNotLognormal(sizes=sizeArray, occurrances=x), axis=0, arr=occurrances)
+
+        allSigmaLognormal: np.ndarray() = np.apply_along_axis(
+            func1d=lambda x: sigmaLognormal(sizes=sizeArray, occurrances=x), axis=0, arr=occurrances)
+        pS: np.ndarray = np.apply_along_axis(
+            func1d=lambda x: x/(np.sum(x) * sizeDiff), axis=0, arr=occurrances)
+        sizeReplicated: np.ndarray = np.array(
+            [sizeArray] * len(self.concList)).T
+        yData: np.ndarray = ((pS * sizeArray.reshape((-1, 1))) *
+                             allSigmaLognormal.reshape((1, -1)))
+        xData: np.ndarray = (np.log(
+            sizeReplicated) - np.log(allSnotLognormal).reshape((1, -1))) / allSigmaLognormal.reshape((1, -1))
+        return xData.T, yData.T
 
     @classmethod
     def instantiateFromPath(cls, pathData: str, concList: List[str], kToTry: List[float], kwargs: dict = {'header': 0}) -> Type:
