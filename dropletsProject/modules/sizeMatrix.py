@@ -16,6 +16,8 @@ class sizeInstance:
         self.numberOfK: int = len(self.kToTry)
         self.df: pd.DataFrame = df
         self.concArray: np.array = np.array(self.concList).astype(float)
+        self.sizeArray: np.ndarray = np.array(self.df['Size'])
+        self.occurrances: np.ndarray = np.array(self.df.iloc[:, 1:])
 
     def __enter__(self):
         return self
@@ -92,28 +94,56 @@ class sizeInstance:
 
         return xData, yData
 
+    def getAllSnot(self) -> np.ndarray:
+        '''
+        Thaught for FUS and snapFUS data
+        '''
+
+        allSnotLognormal: np.ndarray = np.apply_along_axis(
+            func1d=lambda x: sNotLognormal(sizes=self.sizeArray, occurrances=x), axis=0, arr=self.occurrances)
+        return allSnotLognormal
+
+    def getAllSigmaLognormal(self) -> np.ndarray:
+
+        allSigmaLognormal: np.ndarray = np.apply_along_axis(
+            func1d=lambda x: sigmaLognormal(sizes=self.sizeArray, occurrances=x), axis=0, arr=self.occurrances)
+        return allSigmaLognormal
+
+    def getPdf(self) -> np.ndarray:
+
+        sizeDiff: np.ndarray = np.diff(np.insert(self.sizeArray, 0, [0]))
+        pS: np.ndarray = np.apply_along_axis(
+            func1d=lambda x: x/(np.sum(x) * sizeDiff), axis=0, arr=self.occurrances)
+        return pS
+
     def getCollapsedPdf(self) -> Tuple[np.ndarray]:
         '''
         Thaught for FUS and snapFUS data
         '''
 
-        sizeArray: np.ndarray = np.array(self.df['Size'])
-        sizeDiff: np.ndarray = np.diff(np.insert(sizeArray, 0, [0]))
-        occurrances: np.ndarray = np.array(self.df.iloc[:, 1:])
-        allSnotLognormal: np.ndarray = np.apply_along_axis(
-            func1d=lambda x: sNotLognormal(sizes=sizeArray, occurrances=x), axis=0, arr=occurrances)
+        allSnotLognormal: np.ndarray = self.getAllSnot()
 
-        allSigmaLognormal: np.ndarray() = np.apply_along_axis(
-            func1d=lambda x: sigmaLognormal(sizes=sizeArray, occurrances=x), axis=0, arr=occurrances)
-        pS: np.ndarray = np.apply_along_axis(
-            func1d=lambda x: x/(np.sum(x) * sizeDiff), axis=0, arr=occurrances)
+        allSigmaLognormal: np.ndarray = self.getAllSigmaLognormal()
+        pS: np.ndarray = self.getPdf()
         sizeReplicated: np.ndarray = np.array(
-            [sizeArray] * len(self.concList)).T
-        yData: np.ndarray = ((pS * sizeArray.reshape((-1, 1))) *
+            [self.sizeArray] * len(self.concList)).T
+        yData: np.ndarray = ((pS * self.sizeArray.reshape((-1, 1))) *
                              allSigmaLognormal.reshape((1, -1)))
         xData: np.ndarray = (np.log(
             sizeReplicated) - np.log(allSnotLognormal).reshape((1, -1))) / allSigmaLognormal.reshape((1, -1))
         return xData.T, yData.T
+
+    def getCriticalCollapse(self, criticalValue: float) -> Tuple[np.ndarray]:
+        sizeReplicated: np.ndarray = np.array(
+            [self.sizeArray] * len(self.concList)).T
+        concFloat: np.ndarray = np.array(
+            [float(conc) for conc in self.concList])
+        xData: np.ndarray = sizeReplicated * (1 - (concFloat / criticalValue))
+
+        pS: np.ndarray = self.getPdf()
+        yData: np.ndarray = pS / (1 - (concFloat / criticalValue))
+
+        return xData, yData
 
     @classmethod
     def instantiateFromPath(cls, pathData: str, concList: List[str], kToTry: List[float], kwargs: dict = {'header': 0}) -> Type:

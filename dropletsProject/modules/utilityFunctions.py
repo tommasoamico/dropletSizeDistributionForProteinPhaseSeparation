@@ -116,7 +116,6 @@ def fC(f: callable, g: callable) -> callable:
 
 def varPropagation(m: float, q: float, varm: float, varq: float):
     return (q**2 / m**4) * varm + (1 / q ** 2) * varq
-# (popt[1]**2 / popt[0]**4) * pcov[0][0] + (1 / popt[1] **2) * pcov[1][1])
 
 
 def weightedAverage(vars: float, values: float) -> Tuple[float, float]:
