@@ -6,6 +6,7 @@ from matplotlib.colors import Colormap
 import pandas as pd
 from typing import List, Iterable, Union
 from scipy.stats import linregress
+from scipy.optimize import curve_fit
 
 kToTry: List[float] = k_to_try_dead
 plotWidth: float = 10
@@ -24,15 +25,14 @@ def plotRhoEstimate(xData: np.ndarray, yData: np.ndarray, savePath: Path, cmap: 
         xArray: np.ndarray = xData[i, :]
         yArray: np.ndarray = yData[i, :]
         ax.scatter(xArray, yArray, s=140,
-                   color=colors[i], zorder=3, linewidth=.7, marker=markers[i])
+                   color=colors[i], zorder=3, linewidth=.7, marker=markers[i], label=f'k = {kToTry[i]}')
         rhoEstimate = estimateDf['rho']
         errorEstimate = estimateDf['error']
         xAxis = np.linspace(0, rhoEstimate + 2 * errorEstimate, 100)
         slope, intercept, _, _, _ = linregress(xArray, yArray)
         ax.plot(xAxis, xAxis * slope + intercept, color=colors[i], zorder=2)
         ax.set_ylim(bottom=0)
-        ax.scatter(rhoEstimate, 0, s=100, color='#14F70A',
-                   label='$ \\rho_c$ estimate', zorder=5, marker='X')
+
         ax.errorbar(rhoEstimate, 0, xerr=errorEstimate, color='#14F70A',
                     linewidth=3, capsize=5, capthick=3)
         ax.tick_params(axis='both', which='major', labelsize=17, length=6)
@@ -40,9 +40,11 @@ def plotRhoEstimate(xData: np.ndarray, yData: np.ndarray, savePath: Path, cmap: 
         yErrorArray: np.ndarray = yError[i, :]
         inset.errorbar(xArray, yArray, yerr=yErrorArray,
                        fmt='none', capsize=3, color=colors[i])
-
+    ax.scatter(rhoEstimate, 0, s=100, color='#14F70A',
+               label='$ \\rho_c$ estimate', zorder=5, marker='X')
     # plt.show()
-    # plt.savefig(savePath, dpi=300, bbox_inches='tight')
+    plt.legend(loc=(0.2, 0.2), labelspacing=1)
+    plt.savefig(savePath, dpi=300, bbox_inches='tight')
 
 
 def plotPhiEstimation(xData: np.ndarray, yData: np.ndarray, cmap: Colormap, savePath: Path, yError: np.ndarray, dataset: str = 'FUS') -> None:
@@ -57,12 +59,23 @@ def plotPhiEstimation(xData: np.ndarray, yData: np.ndarray, cmap: Colormap, save
     axInset = ax.inset_axes([.58, .07, .415, .35])
     for i in range(xData.shape[0]):
         ax.scatter(xData[i, :], yData[i, :],
-                   marker=markers[i], color=colors[i], zorder=2, s=100)
+                   marker=markers[i], color=colors[i], zorder=2, s=100, label=f'k = {kToTry[i]}')
+
+        def line(x, a, b):
+            return a*x + b
+        popt, pcov = curve_fit(line,
+                               xData[i, 1:], yData[i, 1:])
+        print(popt[0], pcov[0, 0])
+        # plt.scatter(xAxis, xAxis * popt[0] + popt[1])
         ax.plot(xAxis, xAxis + intercepts[dataset][i],
                 color=colors[i], zorder=1, linewidth=.7)
+
         axInset.errorbar(xData[i, :], yData[i, :], yerr=yError[i, :],
                          color=colors[i], fmt='none', capsize=3)
+
     ax.tick_params(axis='both', which='major', labelsize=17, length=6)
+
+    plt.legend(loc=(.3, .8))
     # plt.savefig(savePath, dpi=300, bbox_inches='tight')
 
 

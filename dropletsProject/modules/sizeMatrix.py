@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import List, Type, Tuple, Iterable
+from typing import List, Type, Tuple, Iterable, Optional
 from modules.utilityFunctions import k_array_lines, strToFloat, varPropagation, line, weightedAverage, dict_moment_no_random, stackList, dict_moment, k_moment, sNotLognormal, sigmaLognormal
 from scipy.optimize import curve_fit
 from modules.survivalAnalysis import survival
@@ -153,7 +153,7 @@ class sizeInstance:
         return survival(self, fusUnfus=fusUnfus)
 
     @classmethod
-    def instantiateFusUnfus(cls, df: pd.DataFrame, rangeColumns: int, experimentNumber: int, concList: List[str], kToTry: List[float]) -> Type:
+    def instantiateFusUnfus(cls, df: pd.DataFrame, rangeColumns: int, experimentNumber: int, concList: List[str], kToTry: List[float], finiteSizePercentage: Optional[float] = None) -> Type:
         assert np.logical_and(experimentNumber > 0, experimentNumber <=
                               3), 'The number of experiment is has to be between 1 and 3'
         columnsToSelect: List[int] = [0] + \
@@ -163,4 +163,7 @@ class sizeInstance:
             filter(lambda x: 'Unnamed' not in x, list(df.columns)))[1:]
         dfToInsert = df.iloc[:, columnsToSelect]
         dfToInsert.columns = dfColumns
+        if finiteSizePercentage is not None:
+            dfToInsert.loc[:, 'Size':] = dfToInsert.loc[:,
+                                                        'Size':] // (1 / finiteSizePercentage)
         return sizeInstance(df=dfToInsert, concList=concList, kToTry=kToTry)
