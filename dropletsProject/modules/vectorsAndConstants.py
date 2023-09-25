@@ -46,3 +46,7 @@ criticalEstimationJoinedB: float = pd.read_csv(
     '/Users/tommaso/Workspace/dropletSizeDistributionForProteinPhaseSeparation/data/appData/fusUnfus/snapFUS/criticalRho/estimateExperimentJoint.csv')['rho'][0]
 ###########
 coolwarm: Colormap = matplotlib.cm.get_cmap('coolwarm')
+
+
+concOwnData: List[str] = ['20', '40', '50', '60', '75', '80', '100']
+criticalOwn = 88

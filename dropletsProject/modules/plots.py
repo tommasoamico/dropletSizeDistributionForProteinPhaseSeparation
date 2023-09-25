@@ -13,6 +13,11 @@ plotWidth: float = 10
 hightRatio: float = .65
 
 markers: List[str] = ['o', 's', 'D', 'v', '>', '<']
+kToTry = [0.25, 0.75, 1.25, 1.75]
+
+
+def line(x, a, b):
+    return a*x + b
 
 
 def plotRhoEstimate(xData: np.ndarray, yData: np.ndarray, savePath: Path, cmap: Colormap, estimateDf: pd.DataFrame, yError: np.ndarray) -> None:
@@ -43,31 +48,29 @@ def plotRhoEstimate(xData: np.ndarray, yData: np.ndarray, savePath: Path, cmap: 
     ax.scatter(rhoEstimate, 0, s=100, color='#14F70A',
                label='$ \\rho_c$ estimate', zorder=5, marker='X')
     # plt.show()
-    plt.legend(loc=(0.2, 0.2), labelspacing=1)
+    plt.legend(loc='lower left', labelspacing=1)
     plt.savefig(savePath, dpi=300, bbox_inches='tight')
 
 
 def plotPhiEstimation(xData: np.ndarray, yData: np.ndarray, cmap: Colormap, savePath: Path, yError: np.ndarray, dataset: str = 'FUS') -> None:
     colors: List[tuple] = [cmap(i) for i in np.linspace(0, 1, xData.shape[0])]
-    intercepts = {'FUS': [4.49, 4.53, 4.58, 4.65],
-                  'snapFUS': [4.59, 4.65, 4.75, 4.85]}
-
+    # intercepts = {'FUS': [4.49, 4.53, 4.58, 4.65],
+    #             'snapFUS': [4.59, 4.65, 4.75, 4.85]}
+    intercepts = [0.6, 0.9, 1.1, 1.3]
     xAxis: np.ndarray = np.linspace(
         np.min(xData[0, :]) - .1, np.max(xData[0, :]) + .1, 100)
     markers: List[str] = ['s', 'D', '^', 'o']
     _, ax = plt.subplots(1, 1, figsize=(plotWidth, plotWidth * hightRatio))
-    axInset = ax.inset_axes([.58, .07, .415, .35])
+    axInset = ax.inset_axes([.05, .62, .35, .35])
     for i in range(xData.shape[0]):
         ax.scatter(xData[i, :], yData[i, :],
                    marker=markers[i], color=colors[i], zorder=2, s=100, label=f'k = {kToTry[i]}')
 
-        def line(x, a, b):
-            return a*x + b
         popt, pcov = curve_fit(line,
                                xData[i, 1:], yData[i, 1:])
-        print(popt[0], pcov[0, 0])
+
         # plt.scatter(xAxis, xAxis * popt[0] + popt[1])
-        ax.plot(xAxis, xAxis + intercepts[dataset][i],
+        ax.plot(xAxis, xAxis + intercepts[i],
                 color=colors[i], zorder=1, linewidth=.7)
 
         axInset.errorbar(xData[i, :], yData[i, :], yerr=yError[i, :],
@@ -75,8 +78,8 @@ def plotPhiEstimation(xData: np.ndarray, yData: np.ndarray, cmap: Colormap, save
 
     ax.tick_params(axis='both', which='major', labelsize=17, length=6)
 
-    plt.legend(loc=(.3, .8))
-    # plt.savefig(savePath, dpi=300, bbox_inches='tight')
+    plt.legend(loc='lower right')
+    plt.savefig(savePath, dpi=300, bbox_inches='tight')
 
 
 def plotAlphaEstimation(xData: np.ndarray, yData: np.ndarray, savePath: Path, yError: np.ndarray, dataset: str = 'FUS') -> None:
@@ -90,18 +93,25 @@ def plotAlphaEstimation(xData: np.ndarray, yData: np.ndarray, savePath: Path, yE
 
     ax.scatter(xData, yData, zorder=2,
                linewidth=.7, s=200, color=blue)
-    axInset = ax.inset_axes([.58, .07, .415, .35])
+    axInset = ax.inset_axes([.05, .6, .415, .35])
     axInset.errorbar(xData, yData, yerr=yError,
                      zorder=2, fmt='none', capsize=3, color=blue)
-    ax.plot(xAxis, xAxis + intercepts[dataset][0], color='black', zorder=1)
-    ax.plot(xAxis, xAxis + intercepts[dataset][1], color=gray, linestyle='--')
+
+    popt, pcov = curve_fit(line,
+                           xData, yData)
+    ax.plot(xAxis, xAxis + popt[1], color='black', zorder=1)
+    ax.plot(xAxis, xAxis + .68, color=gray, linestyle='--')
     ax.tick_params(axis='both', which='major', labelsize=17, length=6)
     plt.savefig(savePath, dpi=300, bbox_inches='tight')
+    plt.show()
 
 
 def plotLognormalParameters(dataPath: Path, savePath: Path, cmap: Colormap, concLists: List[List[str]], parameter: str = 'sNot') -> None:
+    # Explicitly for fus Unfus
+
     fusPath: Path = dataPath / 'FUS' / 'lognormalParameters'
     snapFusPath: Path = dataPath / 'snapFUS' / 'lognormalParameters'
+
     red: tuple = cmap(0.9)
     blue: str = '#0F52BA'
     _, ax = plt.subplots(1, 1, figsize=(plotWidth, plotWidth * hightRatio))
@@ -120,6 +130,30 @@ def plotLognormalParameters(dataPath: Path, savePath: Path, cmap: Colormap, conc
         ax.scatter(floatConc, yData, s=200, color=color)
         axInset.errorbar(floatConc, yData,
                          yerr=yError, zorder=2, fmt='none', capsize=3, color=color)
+
+    ax.tick_params(axis='both', which='major', labelsize=17, length=6)
+    plt.savefig(savePath, dpi=300, bbox_inches='tight')
+
+
+def plotLognormalParametersOwn(dataPath: Path, savePath: Path, concList: List[List[str]], parameter: str = 'sNot') -> None:
+    # Explicitly for fus Unfus
+
+    blue: str = '#0F52BA'
+    _, ax = plt.subplots(1, 1, figsize=(plotWidth, plotWidth * hightRatio))
+    if parameter == 'sNot':
+        axInset = ax.inset_axes([.57, .05, .40, .4])
+    else:
+
+        axInset = ax.inset_axes([.06, .28, .49, .4])
+
+    floatConc: np.ndarray = np.array([float(conc) for conc in concList])
+    yData: np.ndarray = np.loadtxt(
+        dataPath / f'{parameter}YJoined.txt')
+    yError = np.loadtxt(
+        dataPath / f'{parameter}ErrorJoined.txt')
+    ax.scatter(floatConc, yData, s=200, color=blue)
+    axInset.errorbar(floatConc, yData,
+                     yerr=yError, zorder=2, fmt='none', capsize=3, color=blue)
 
     ax.tick_params(axis='both', which='major', labelsize=17, length=6)
     plt.savefig(savePath, dpi=300, bbox_inches='tight')

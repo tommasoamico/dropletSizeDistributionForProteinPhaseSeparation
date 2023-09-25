@@ -44,6 +44,14 @@ def dict_moment_no_random(df: pd.DataFrame, conc_list: List[str], k: float) -> d
     return {conc: k_mom_no_occ(df, conc, conc_list, k) for conc in conc_list}
 
 
+def dict_moment_no_random_phi(df: pd.DataFrame, conc_list: List[str], k: float) -> dict:
+    '''
+    Dictionary of kth moments for each concentration in conc_list
+    '''
+
+    return {conc: k_mom_no_occ(df, conc, conc_list, k)/k_mom_no_occ(df, conc, conc_list, 1) for conc in conc_list}
+
+
 def dict_moment_no_random_std(df: pd.DataFrame, conc_list: List[str], k: float) -> dict:
     '''
     Dictionary of kth moment's std for each concentration in conc_list
@@ -77,6 +85,25 @@ def k_array_lines(k_to_try: List[float], df: pd.DataFrame, conc_list: List[str],
     for k in k_to_try:
         k_mom: dict = momentFunc(df, conc_list, k)
         k_mom = dict(map(lambda kv: (kv[0], (kv[1])**(-1/k)), k_mom.items()))
+        k_array_lines.append(k_mom)
+
+    return k_array_lines
+
+
+def k_array_lines_phi(k_to_try: List[float], df: pd.DataFrame, conc_list: List[str], phi: float) -> List[dict]:
+    '''
+    Rescales the k-th moment 
+    '''
+
+    momentFunc: callable = dict_moment_no_random_phi
+    k_array_lines: List[float] = []
+
+    for k in k_to_try:
+        k_mom: dict = momentFunc(df, conc_list, k)
+
+        k_mom = dict(
+            map(lambda kv: (kv[0], (kv[1])**(-1/(phi * (k - 1)))), k_mom.items()))
+
         k_array_lines.append(k_mom)
 
     return k_array_lines
@@ -282,3 +309,10 @@ def tailDict(dictionary: dict) -> dict:
 
 def stackList(inputList: List[np.array]) -> np.array:
     return reduce(lambda x, y: np.vstack([x, y]), inputList)
+
+
+def getHistogram(x: np.ndarray, bins: Union[int, str]) -> Tuple[np.ndarray, np.ndarray]:
+    xPolished: np.ndarray = x[np.logical_not(np.isnan(x))]
+    counts, edges = np.histogram(xPolished, bins=bins, density=True)
+    binCenters = (edges[1:] + edges[:-1]) / 2
+    return counts, binCenters
